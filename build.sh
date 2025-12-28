@@ -1,7 +1,7 @@
 #!/system/bin/sh
 
 
-export APP_DATA="/data/user/0/onegiaterm.ewirs.web.id/files/gia"
+export APP_DATA="/data/user/0/id.web.ewirs.gia/files/gia"
 export UBUNTU_DIR="$APP_DATA/ubuntu"
 
 
