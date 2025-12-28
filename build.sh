@@ -1,4 +1,4 @@
-#!/system/bin/sh
+homeome!/system/bin/sh
 
 # =============================================================================
 # Gia - Ubuntu 20.04 armhf native starter 
@@ -6,7 +6,7 @@
 
 export APP_DATA="/data/user/0/id.web.ewirs.gia/fhome"
 export UBUNTU_ROOT="$APP_DATA/ubuntu"
-export HOME="$APP_DATA/home"               # ← lebih standar daripada gia/
+export HOME="$APP_DATA/gia"               # ← lebih standar daripada gia/
 export PATH="$UBUNTU_ROOT/usr/bin:$UBUNTU_ROOT/bin:$PATH"
 export LD_LIBRARY_PATH="$UBUNTU_ROOT/lib:$UBUNTU_ROOT/usr/lib:$UBUNTU_ROOT/usr/lib/arm-linux-gnueabihf"
 
