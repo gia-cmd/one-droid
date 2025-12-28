@@ -1,4 +1,4 @@
-homeome!/system/bin/sh
+#!/system/bin/sh
 
 # =============================================================================
 # Gia - Ubuntu 20.04 armhf native starter 
