@@ -2,7 +2,7 @@
 
 
 export APP_DATA="/data/user/0/onegiaterm.ewirs.web.id/files/gia"
-export UBUNTU_DIR="$APP_DATA/cupy"
+export UBUNTU_DIR="$APP_DATA/ubuntu"
 
 
 export PATH="$UBUNTU_DIR/usr/bin:$UBUNTU_DIR/usr/sbin:$PATH"
