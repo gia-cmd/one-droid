@@ -1,0 +1,22 @@
+#!/system/bin/sh
+
+# Simulation Install Package
+install_pkg() {
+    echo "Mencari paket: $1..."
+    sleep 1
+    echo "Mengunduh $1 dari server..."
+    # Di sini Anda bisa menggunakan curl atau wget ke repo Anda
+    echo "Berhasil memasang $1."
+}
+
+case "$1" in
+    install)
+        install_pkg "$2"
+        ;;
+    list)
+        echo "Paket tersedia: python, git, nodejs"
+        ;;
+    *)
+        echo "Gunakan: pkg [install|list] [nama_paket]"
+        ;;
+esac
