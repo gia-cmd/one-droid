@@ -1,66 +1,57 @@
 #!/system/bin/sh
-# Pure sh HTTP-like "server" menggunakan NAMED PIPE (FIFO) - hanya lokal/debug
-# Bukan TCP server sungguhan → hanya simulasi request-response via pipe
 
 # Konfigurasi
-PORT=8070                  # hanya untuk tampilan (tidak benar-benar dipakai)
-DEV_PATH="/data/user/0/id.web.ewirs.gia/files"
-FIFO_IN="$DEV_PATH/http-in.pipe"
-FIFO_OUT="$DEV_PATH/http-out.pipe"
+PORT=8070
+IP="127.0.0.1"
 
-echo "Memulai pseudo-server di direktori: $DEV_PATH"
-echo "(Hanya lokal - bukan TCP server sungguhan)"
-echo "Gunakan: echo 'GET /tes' > $FIFO_IN"
-echo "Lihat respons di: cat $FIFO_OUT"
-echo ""
+echo "Server berjalan di http://$IP:$PORT"
+echo "Tekan [CTRL+C] untuk berhenti."
 
-# Buat named pipes jika belum ada
-[ -p "$FIFO_IN" ]  || mkfifo "$FIFO_IN"  2>/dev/null
-[ -p "$FIFO_OUT" ] || mkfifo "$FIFO_OUT" 2>/dev/null
+# Fungsi untuk menangani request
+handle_request() {
+    # Baca baris pertama (Method, Path, Protocol)
+    read -r line <&3
+    [ -z "$line" ] && return
 
-# Pastikan permission (jika root atau punya akses)
-chmod 600 "$FIFO_IN" "$FIFO_OUT" 2>/dev/null
+    echo "Request: $line"
 
-echo "Pseudo-server siap. Tekan Ctrl+C untuk stop."
+    # Isi Body HTML
+    RESPONSE="<html>
+<head><title>Bash Server</title></head>
+<body>
+    <h1>Hello dari Pure Bash!</h1>
+    <p>Request kamu: <b>$line</b></p>
+    <p>Waktu server: $(date)</p>
+</body>
+</html>"
 
+    # Kirim Header dan Body ke file descriptor 3
+    printf "HTTP/1.1 200 OK\r\n" >&3
+    printf "Content-Type: text/html\r\n" >&3
+    printf "Content-Length: %d\r\n" "${#RESPONSE}" >&3
+    printf "Connection: close\r\n" >&3
+    printf "\r\n" >&3
+    printf "%s" "$RESPONSE" >&3
+}
+
+# Loop utama menggunakan 'exec' untuk membuka socket
+# Menggunakan trik listen pada port tertentu
 while true; do
-    # Baca request dari FIFO (blocking sampai ada yang menulis ke FIFO_IN)
-    read -r line < "$FIFO_IN"
-
-    if [ -z "$line" ]; then
-        # kosong → lanjut loop
-        continue
+    # Membuka koneksi melalui file descriptor 3
+    # Catatan: Di banyak sistem modern, /dev/tcp hanya untuk CLIENT.
+    # Untuk SERVER murni tanpa NC, kita butuh loopback atau bantuan 'read'
+    
+    exec 3<>/dev/tcp/$IP/$PORT 2>/dev/null
+    
+    if [ $? -ne 0 ]; then
+        # Jika gagal (karena /dev/tcp biasanya bukan listener), 
+        # kita butuh bantuan 'socat' atau 'nc'. 
+        # TAPI, jika Anda di Linux yang mendukung 'loadables' bash:
+        echo "Error: Bash /dev/tcp biasanya hanya untuk client-side."
+        echo "Gunakan 'nc -l -p $PORT -e ./server.sh' jika ingin stabil."
+        exit 1
     fi
 
-    echo "Request masuk: $line"
-
-    # Ambil path sederhana (contoh: GET /halo HTTP/1.1 → /halo)
-    REQUEST_PATH=$(echo "$line" | cut -d' ' -f2 2>/dev/null)
-    [ -z "$REQUEST_PATH" ] && REQUEST_PATH="/"
-
-    # Buat response HTML sederhana
-    RESPONSE="<html><head><title>Pseudo Server</title></head>
-<body>
-<h1>Hello dari Pure Shell!</h1>
-<p>Request path: <strong>$REQUEST_PATH</strong></p>
-<p>Waktu: $(date '+%Y-%m-%d %H:%M:%S')</p>
-<hr>
-<small>Server berjalan di $DEV_PATH (FIFO mode)</small>
-</body></html>"
-
-    # Hitung panjang content
-    CONTENT_LENGTH=$(echo -n "$RESPONSE" | wc -c 2>/dev/null || echo ${#RESPONSE})
-
-    # Kirim response ke FIFO_OUT (dalam format HTTP sederhana)
-    {
-        echo "HTTP/1.1 200 OK"
-        echo "Content-Type: text/html"
-        echo "Content-Length: $CONTENT_LENGTH"
-        echo "Connection: close"
-        echo ""
-        echo "$RESPONSE"
-    } > "$FIFO_OUT"
-
-    # Optional: log ke stderr juga
-    echo "Response dikirim ke $FIFO_OUT (panjang: $CONTENT_LENGTH bytes)"
+    handle_request
+    exec 3>&- # Tutup koneksi
 done
