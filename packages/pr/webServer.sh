@@ -1,36 +1,66 @@
 #!/system/bin/sh
+# Pure sh HTTP-like "server" menggunakan NAMED PIPE (FIFO) - hanya lokal/debug
+# Bukan TCP server sungguhan → hanya simulasi request-response via pipe
 
 # Konfigurasi
-PORT=8080
-DEV_PATH="/data/user/0/id.web.ewirs.gia/files" # Sesuaikan dengan path custom Anda
+PORT=8070                  # hanya untuk tampilan (tidak benar-benar dipakai)
+DEV_PATH="/data/user/0/id.web.ewirs.gia/files"
+FIFO_IN="$DEV_PATH/http-in.pipe"
+FIFO_OUT="$DEV_PATH/http-out.pipe"
 
-echo "Server berjalan di port $PORT..."
+echo "Memulai pseudo-server di direktori: $DEV_PATH"
+echo "(Hanya lokal - bukan TCP server sungguhan)"
+echo "Gunakan: echo 'GET /tes' > $FIFO_IN"
+echo "Lihat respons di: cat $FIFO_OUT"
+echo ""
+
+# Buat named pipes jika belum ada
+[ -p "$FIFO_IN" ]  || mkfifo "$FIFO_IN"  2>/dev/null
+[ -p "$FIFO_OUT" ] || mkfifo "$FIFO_OUT" 2>/dev/null
+
+# Pastikan permission (jika root atau punya akses)
+chmod 600 "$FIFO_IN" "$FIFO_OUT" 2>/dev/null
+
+echo "Pseudo-server siap. Tekan Ctrl+C untuk stop."
 
 while true; do
-  # Menggunakan exec untuk membuka file descriptor (FD) 3 ke soket
-  # Note: Bash original menggunakan /dev/tcp/host/port
-  exec 3<>$DEV_PATH
+    # Baca request dari FIFO (blocking sampai ada yang menulis ke FIFO_IN)
+    read -r line < "$FIFO_IN"
 
-  # Membaca request dari client (baris pertama biasanya: GET / HTTP/1.1)
-  read -u 3 line
-  
-  # Ambil path yang diminta (misal: /index.html)
-  REQUEST_PATH=$(echo $line)
-  echo "Request masuk: $line"
+    if [ -z "$line" ]; then
+        # kosong → lanjut loop
+        continue
+    fi
 
-  # Logika Response
-  RESPONSE="<html><body><h1>Hello dari Pure Bash!</h1><p>Anda mengakses: $REQUEST_PATH</p></body></html>"
-  
-  # Mengirim HTTP Header
-  echo -e "HTTP/1.1 200 OK" >&3
-  echo -e "Content-Type: text/html" >&3
-  echo -e "Content-Length: ${#RESPONSE}" >&3
-  echo -e "Connection: close" >&3
-  echo -e "" >&3
-  
-  # Mengirim Body
-  echo -e "$RESPONSE" >&3
+    echo "Request masuk: $line"
 
-  # Tutup koneksi agar browser berhenti loading
-  exec 3>&-
+    # Ambil path sederhana (contoh: GET /halo HTTP/1.1 → /halo)
+    REQUEST_PATH=$(echo "$line" | cut -d' ' -f2 2>/dev/null)
+    [ -z "$REQUEST_PATH" ] && REQUEST_PATH="/"
+
+    # Buat response HTML sederhana
+    RESPONSE="<html><head><title>Pseudo Server</title></head>
+<body>
+<h1>Hello dari Pure Shell!</h1>
+<p>Request path: <strong>$REQUEST_PATH</strong></p>
+<p>Waktu: $(date '+%Y-%m-%d %H:%M:%S')</p>
+<hr>
+<small>Server berjalan di $DEV_PATH (FIFO mode)</small>
+</body></html>"
+
+    # Hitung panjang content
+    CONTENT_LENGTH=$(echo -n "$RESPONSE" | wc -c 2>/dev/null || echo ${#RESPONSE})
+
+    # Kirim response ke FIFO_OUT (dalam format HTTP sederhana)
+    {
+        echo "HTTP/1.1 200 OK"
+        echo "Content-Type: text/html"
+        echo "Content-Length: $CONTENT_LENGTH"
+        echo "Connection: close"
+        echo ""
+        echo "$RESPONSE"
+    } > "$FIFO_OUT"
+
+    # Optional: log ke stderr juga
+    echo "Response dikirim ke $FIFO_OUT (panjang: $CONTENT_LENGTH bytes)"
 done
