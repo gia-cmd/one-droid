@@ -2,7 +2,7 @@
 
 # Konfigurasi
 PORT=8080
-DEV_PATH="/sdcard/media/ewies/portos/public" # Sesuaikan dengan path custom Anda
+DEV_PATH="/data/user/0/id.web.ewirs.gia/files" # Sesuaikan dengan path custom Anda
 
 echo "Server berjalan di port $PORT..."
 
@@ -15,7 +15,7 @@ while true; do
   read -u 3 line
   
   # Ambil path yang diminta (misal: /index.html)
-  REQUEST_PATH=$(echo $line | cut -d' ' -f2)
+  REQUEST_PATH=$(echo $line)
   echo "Request masuk: $line"
 
   # Logika Response
