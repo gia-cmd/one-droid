@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/system/bin/sh
 
 # Konfigurasi
 PORT=8080
-DEV_PATH="/dev/gia/localhost/$PORT" # Sesuaikan dengan path custom Anda
+DEV_PATH="/sdcard/media/ewies/portos/public" # Sesuaikan dengan path custom Anda
 
 echo "Server berjalan di port $PORT..."
 
